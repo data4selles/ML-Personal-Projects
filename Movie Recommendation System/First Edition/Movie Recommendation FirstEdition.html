@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Películas y Recomendaciones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+
+        .container {
+            width: 80%;
+            margin: auto;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #recommendationsList {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        #recommendationsList li {
+            background-color: #f1f1f1;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Recomendador de Películas</h1>
+
+    <!-- Input y buscador -->
+    <input type="text" id="searchInput" oninput="filterMovies()" placeholder="Escribe el nombre de la película">
+
+    <!-- Lista de resultados de búsqueda -->
+    <ul id="movieList" style="display: none;"></ul>
+
+    <!-- Botón para obtener recomendaciones -->
+    <button onclick="getRecommendations()">Obtener Recomendaciones</button>
+
+    <!-- Aquí se mostrarán las recomendaciones -->
+    <ul id="recommendationsList"></ul>
+</div>
+
+<script>
+// Variable global que almacenará las películas obtenidas desde la API
+let movies = [];
+let selectedMovieId = null;
+
+// Realizamos la llamada a la API para obtener las películas
+fetch('http://localhost:8000/movies')
+    .then(response => response.json())
+    .then(data => {
+        movies = data; // Almacenamos las películas obtenidas desde la API
+    })
+    .catch(error => {
+        console.error('Error al obtener las películas:', error);
+        alert('Hubo un error al obtener las películas.');
+    });
+
+// Filtra las películas a medida que escribimos
+function filterMovies() {
+    const input = document.getElementById('searchInput').value.toLowerCase();
+    const movieList = document.getElementById('movieList');
+
+    // Filtrar las películas
+    const filteredMovies = movies.filter(movie => movie.MovieTitle.toLowerCase().includes(input));
+    
+    movieList.innerHTML = ''; // Limpiar lista
+    if (filteredMovies.length > 0) {
+        movieList.style.display = 'block';
+        filteredMovies.forEach(movie => {
+            const listItem = document.createElement('li');
+            listItem.textContent = movie.MovieTitle;
+            listItem.onclick = () => selectMovie(movie); // Seleccionamos la película al hacer click
+            movieList.appendChild(listItem);
+        });
+    } else {
+        movieList.style.display = 'none';
+    }
+}
+
+// Cuando seleccionamos una película, mostramos el título y ocultamos la lista de resultados
+function selectMovie(movie) {
+    selectedMovieId = movie.MovieId;
+    document.getElementById('searchInput').value = movie.MovieTitle; // Rellenamos el input con el título seleccionado
+    document.getElementById('movieList').style.display = 'none'; // Ocultamos la lista de sugerencias
+}
+
+// Obtiene las recomendaciones para la película seleccionada usando el MovieId
+function getRecommendations() {
+    if (!selectedMovieId) {
+        alert('Por favor, selecciona una película.');
+        return;
+    }
+
+    // Realiza la solicitud a la API para obtener las recomendaciones
+    fetch(`http://localhost:8000/recommendations/${selectedMovieId}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Recomendaciones recibidas:', data);  // Mensaje de depuración
+            if (data.recommendations && Array.isArray(data.recommendations)) {
+                displayRecommendations(data.recommendations);
+            } else {
+                alert('No se encontraron recomendaciones');
+            }
+        })
+        .catch(error => {
+            console.error('Error al obtener las recomendaciones:', error);
+            alert('Hubo un error al obtener las recomendaciones');
+        });
+}
+
+// Muestra las recomendaciones en el frontend
+function displayRecommendations(recommendations) {
+    const recommendationsList = document.getElementById('recommendationsList');
+    recommendationsList.innerHTML = ''; // Limpiar las recomendaciones anteriores
+
+    if (recommendations.length === 0) {
+        recommendationsList.innerHTML = '<li>No se encontraron recomendaciones.</li>';
+        return;
+    }
+
+    // Mostrar las recomendaciones (directamente acceder a los títulos)
+    recommendations.forEach(title => {
+        const listItem = document.createElement('li');
+        listItem.textContent = title;  // Directamente usamos el título de la película
+        recommendationsList.appendChild(listItem);
+    });
+}
+
+</script>
+
+</body>
+</html>
